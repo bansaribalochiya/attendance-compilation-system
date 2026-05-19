@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#eef2f7;min-height:100vh;color:#1e293b}
+header{background:linear-gradient(135deg,#1a56db,#0ea5e9);color:#fff;padding:16px 24px}
+header h1{font-size:1.3rem;font-weight:700}
+header p{font-size:0.8rem;opacity:.85;margin-top:3px}
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e2e8f0;padding:0 16px;gap:2px;overflow-x:auto}
+.tab-btn{padding:13px 15px;border:none;background:none;cursor:pointer;font-size:.82rem;color:#64748b;border-bottom:3px solid transparent;margin-bottom:-2px;font-weight:500;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.tab-btn:hover{color:#1a56db}
+.tab-btn.active{color:#1a56db;border-bottom-color:#1a56db}
+main{padding:20px;max-width:1500px;margin:0 auto}
+.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px}
+.form-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:.8rem;font-weight:600;color:#475569}
+select,input[type=text]{padding:8px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.88rem;outline:none}
+select:focus,input:focus{border-color:#1a56db}
+.faculty-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+.faculty-card{border:2px dashed #cbd5e1;border-radius:10px;padding:18px 14px;text-align:center;transition:all .2s;background:#fafafa;position:relative;overflow:hidden}
+.faculty-card:hover{border-color:#1a56db;background:#f0f7ff}
+.faculty-card.has-file{border:2px solid #22c55e;background:#f0fdf4}
+.faculty-card input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.faculty-card .f-icon{font-size:1.8rem;margin-bottom:6px}
+.faculty-card .f-title{font-weight:600;font-size:.88rem}
+.faculty-card .f-hint{font-size:.75rem;color:#94a3b8;margin-top:3px}
+.faculty-card .f-name{font-size:.73rem;color:#16a34a;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+.btn{padding:9px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:600;transition:all .2s}
+.btn-primary{background:#1a56db;color:#fff}.btn-primary:hover{background:#1e40af}
+.btn-primary:disabled{background:#94a3b8;cursor:not-allowed}
+.btn-success{background:#16a34a;color:#fff}.btn-success:hover{background:#15803d}
+.btn-outline{background:#fff;color:#1a56db;border:1.5px solid #1a56db}.btn-outline:hover{background:#eff6ff}
+.btn-danger{background:#dc2626;color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-purple{background:#7c3aed;color:#fff}.btn-purple:hover{background:#6d28d9}
+.btn-sm{padding:6px 13px;font-size:.8rem}
+.status-bar{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:.87rem;color:#1e40af}
+.spinner{width:18px;height:18px;border:2px solid #bfdbfe;border-top-color:#1a56db;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0}
+table{border-collapse:collapse;width:100%;font-size:.8rem}
+thead th{background:#1e3a8a;color:#fff;padding:9px 7px;text-align:center;white-space:nowrap;font-weight:600;font-size:.78rem}
+thead th:nth-child(1),thead th:nth-child(2),thead th:nth-child(3){text-align:left}
+tbody td{padding:6px 7px;border-bottom:1px solid #f1f5f9;text-align:center;white-space:nowrap}
+tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3){text-align:left;min-width:100px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#f8fafc}
+.p-cell{background:#dcfce7;color:#166534;border-radius:4px;padding:1px 6px;font-weight:700;font-size:.75rem}
+.a-cell{background:#fee2e2;color:#991b1b;border-radius:4px;padding:1px 6px;font-size:.75rem}
+.pct-good{color:#16a34a;font-weight:700}.pct-ok{color:#d97706;font-weight:700}.pct-bad{color:#dc2626;font-weight:700}
+.month-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.m-pill{padding:5px 13px;border-radius:20px;border:1.5px solid #cbd5e1;background:#fff;cursor:pointer;font-size:.8rem;font-weight:500;transition:all .2s}
+.m-pill:hover{border-color:#1a56db;color:#1a56db}
+.m-pill.active{background:#1a56db;color:#fff;border-color:#1a56db}
+.subj-pill{padding:5px 13px;border-radius:20px;border:1.5px solid #c4b5fd;background:#fff;cursor:pointer;font-size:.8rem;font-weight:500;transition:all .2s}
+.subj-pill:hover{border-color:#7c3aed;color:#7c3aed}
+.subj-pill.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.stats-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.stat-card{background:#f8fafc;border-radius:10px;padding:12px 18px;flex:1;min-width:110px;text-align:center;border:1px solid #e2e8f0}
+.stat-card .sv{font-size:1.6rem;font-weight:700;color:#1a56db}
+.stat-card .sl{font-size:.75rem;color:#64748b;margin-top:2px}
+.action-bar{display:flex;gap:8px;flex-wrap:wrap}
+.empty-state{text-align:center;padding:60px 20px;color:#94a3b8}
+.empty-state .ei{font-size:3rem;margin-bottom:12px}
+.marks-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;color:#fff;font-weight:700;font-size:.82rem}
+.m5{background:#16a34a}.m4{background:#0ea5e9}.m3{background:#f59e0b}.m2{background:#ef4444}
+.alert{padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:.85rem;display:flex;align-items:center;gap:8px}
+.alert-e{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.alert-s{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.tip-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;font-size:.82rem;color:#78350f;line-height:1.8}
+.tip-box b{color:#92400e}
+.section-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.section-title{font-size:1.05rem;font-weight:700;color:#1e293b}
+.subj-tag{display:inline-block;background:#ede9fe;color:#5b21b6;border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:600;margin-left:8px}
+.subj-header-box{background:linear-gradient(135deg,#ede9fe,#ddd6fe);border:1px solid #c4b5fd;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.subj-header-box .sname{font-size:1rem;font-weight:700;color:#4c1d95}
+.subj-header-box .smeta{font-size:.8rem;color:#6d28d9}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ===== STATE =====
+const state = {
+  tab: 'upload',
+  month: new Date().getMonth() + 1,
+  year: new Date().getFullYear(),
+  subject: '',
+  files: [null,null,null,null],
+  fileNames: ['','','',''],
+  sheets: {},        // 'subject||YYYY-MM' => compiled data (includes .subject field)
+  curMonth: null,
+  curSubject: null,
+  processing: false,
+  procStatus: '',
+  error: null,
+  success: null
+};
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MSHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const getDays = (m,y) => new Date(y,m,0).getDate();
+const mName  = m => MONTHS[m-1];
+const mShort = m => MSHORT[m-1];
+const sheetKey = (subj,m,y) => `${(subj||'General').trim()}||${y}-${String(m).padStart(2,'0')}`;
+const marks  = p => p>=70?5:p>=60?4:p>=50?3:2;
+const pClass = p => p>=70?'pct-good':p>=50?'pct-ok':'pct-bad';
+
+// ===== FILE =====
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// ===== CLAUDE API =====
+async function extractFromPDF(base64, month, year){
+  const days = getDays(month,year);
+  const prompt = `This is a scanned handwritten attendance sheet for ${mName(month)} ${year} with up to ${days} days.
+
+Extract the attendance data. Return ONLY valid JSON, no markdown, no explanation.
+
+Rules:
+- Circle (○), tick (✓), checkmark, R, P = Present → "P"
+- Blank, cross (✗), X, A, dash = Absent → "A"
+- Extract student name, roll number, enrollment number for each student
+- Include all ${days} days (use "A" if unclear or column missing)
+
+JSON format:
+{"students":[{"name":"Full Name","rollNo":"101","enrollmentNo":"EN001","attendance":{"1":"P","2":"A","3":"P"}}]}
+
+Return ONLY the JSON object.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:4000,
+      messages:[{role:'user',content:[
+        {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+        {type:'text',text:prompt}
+      ]}]
+    })
+  });
+  if(!res.ok){const e=await res.json();throw new Error(e.error?.message||`API error ${res.status}`);}
+  const data=await res.json();
+  const txt=data.content.map(b=>b.text||'').join('');
+  const clean=txt.replace(/```json|```/g,'').trim();
+  return JSON.parse(clean);
+}
+
+// ===== COMPILE =====
+function compile(sheetsArr, month, year){
+  const days = getDays(month,year);
+  const smap = {};
+  sheetsArr.forEach(sheet=>{
+    (sheet?.students||[]).forEach(s=>{
+      const key = (s.enrollmentNo||'').trim() || ((s.rollNo||'').trim()+'_'+(s.name||'').trim());
+      if(!key) return;
+      if(!smap[key]) smap[key]={name:(s.name||'').trim(),rollNo:(s.rollNo||'').trim(),enrollmentNo:(s.enrollmentNo||'').trim(),votes:{}};
+      for(let d=1;d<=days;d++){
+        const m=(s.attendance||{})[String(d)]||'A';
+        if(!smap[key].votes[d]) smap[key].votes[d]={P:0,A:0};
+        smap[key].votes[d][m==='P'?'P':'A']++;
+      }
+    });
+  });
+  const students = Object.values(smap).map(s=>{
+    const att={};let tp=0;
+    for(let d=1;d<=days;d++){
+      const v=s.votes[d]||{P:0,A:0};
+      const mark=(v.P>0&&v.P>=v.A)?'P':'A';
+      att[d]=mark; if(mark==='P') tp++;
+    }
+    const ta=days-tp, pct=Math.round(tp/days*100);
+    return {name:s.name,rollNo:s.rollNo,enrollmentNo:s.enrollmentNo,att,tp,ta,pct};
+  });
+  students.sort((a,b)=>(parseInt(a.rollNo)||0)-(parseInt(b.rollNo)||0)||a.name.localeCompare(b.name));
+  return {month,year,days,students};
+}
+
+// ===== PROCESS =====
+async function processFiles(){
+  const valid = state.files.filter(f=>f!==null);
+  if(!valid.length){state.error='Upload at least one faculty attendance sheet.';render();return;}
+  state.processing=true;state.error=null;state.success=null;render();
+  try{
+    const results=[];
+    for(let i=0;i<4;i++){
+      if(!state.files[i]) continue;
+      state.procStatus=`Reading Faculty ${i+1} sheet… (${results.length+1}/${valid.length})`;render();
+      const b64=await fileToBase64(state.files[i]);
+      const ext=await extractFromPDF(b64,state.month,state.year);
+      results.push(ext);
+    }
+    state.procStatus='Compiling results…';render();
+    const compiled=compile(results,state.month,state.year);
+    const subj=(state.subject||'General').trim();
+    const k=sheetKey(subj,state.month,state.year);
+    compiled.subject=subj;
+    state.sheets[k]=compiled;
+    state.curMonth=k;
+    state.files=[null,null,null,null];state.fileNames=['','','',''];
+    state.success=`✅ Compiled ${subj} attendance for ${mName(state.month)} ${state.year} — ${compiled.students.length} students.`;
+    state.tab='monthly';
+  }catch(e){state.error='Error: '+e.message;}
+  state.processing=false;render();
+}
+
+// ===== HELPERS: get unique subjects =====
+function getSubjects(){
+  const s=new Set();
+  Object.values(state.sheets).forEach(d=>s.add(d.subject||'General'));
+  return [...s].sort();
+}
+
+function getKeysForSubject(subj){
+  return Object.keys(state.sheets).filter(k=>state.sheets[k].subject===subj).sort();
+}
+
+// ===== EXPORT: Monthly =====
+function dlMonthlyXLSX(k){
+  const d=state.sheets[k];if(!d)return;
+  const {month,year,days,students,subject}=d;
+  const hdr=['Roll No','Enrollment No','Student Name'];
+  for(let i=1;i<=days;i++) hdr.push('Day '+i);
+  hdr.push('Total Present','Total Absent','Attendance %');
+  const rows=[hdr,...students.map(s=>{
+    const r=[s.rollNo,s.enrollmentNo,s.name];
+    for(let i=1;i<=days;i++) r.push(s.att[i]||'A');
+    r.push(s.tp,s.ta,s.pct+'%');return r;
+  })];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),`${mShort(month)} ${year}`);
+  XLSX.writeFile(wb,`${subject}_Attendance_${mName(month)}_${year}.xlsx`);
+}
+
+function dlMonthlyCSV(k){
+  const d=state.sheets[k];if(!d)return;
+  const {month,year,days,students,subject}=d;
+  const hdr=['Roll No','Enrollment No','Student Name'];
+  for(let i=1;i<=days;i++) hdr.push('Day '+i);
+  hdr.push('Total Present','Total Absent','Attendance %');
+  const rows=[hdr.join(','),...students.map(s=>{
+    const r=[s.rollNo,s.enrollmentNo,`"${s.name}"`];
+    for(let i=1;i<=days;i++) r.push(s.att[i]||'A');
+    r.push(s.tp,s.ta,s.pct+'%');return r.join(',');
+  })];
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download=`${subject}_Attendance_${mName(month)}_${year}.csv`;a.click();
+}
+
+// ===== EXPORT: Overall Master =====
+function dlMaster(fmt){
+  const keys=Object.keys(state.sheets).sort();if(!keys.length)return;
+  const smap={};
+  keys.forEach(k=>{
+    const d=state.sheets[k];
+    d.students.forEach(s=>{
+      const id=s.enrollmentNo||(s.rollNo+'_'+s.name);
+      if(!smap[id]) smap[id]={name:s.name,rollNo:s.rollNo,enrollmentNo:s.enrollmentNo,m:{}};
+      smap[id].m[k]=s.pct;
+    });
+  });
+  const students=Object.values(smap).sort((a,b)=>(parseInt(a.rollNo)||0)-(parseInt(b.rollNo)||0)||a.name.localeCompare(b.name));
+  const mCols=keys.map(k=>{const dd=state.sheets[k];return `${dd.subject||'General'} ${mShort(dd.month)} ${dd.year}`;});
+  const hdr=['Roll No','Enrollment No','Student Name',...mCols,'Avg %','Marks (/5)'];
+  const rows=[hdr,...students.map(s=>{
+    const pcts=keys.map(k=>s.m[k]??null);
+    const valid=pcts.filter(p=>p!==null);
+    const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+    return [s.rollNo,s.enrollmentNo,s.name,...pcts.map(p=>p!==null?p+'%':'—'),avg+'%',marks(avg)];
+  })];
+  if(fmt==='xlsx'){
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Master Sheet');
+    XLSX.writeFile(wb,'Attendance_Master_Sheet.xlsx');
+  } else {
+    const csv=rows.map(r=>r.map(c=>typeof c==='string'&&c.includes(',')? `"${c}"`:c).join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download='Attendance_Master_Sheet.csv';a.click();
+  }
+}
+
+// ===== EXPORT: Subject Master =====
+function dlSubjectMaster(subj, fmt){
+  const keys=getKeysForSubject(subj);if(!keys.length)return;
+  const smap={};
+  keys.forEach(k=>{
+    state.sheets[k].students.forEach(s=>{
+      const id=s.enrollmentNo||(s.rollNo+'_'+s.name);
+      if(!smap[id]) smap[id]={name:s.name,rollNo:s.rollNo,enrollmentNo:s.enrollmentNo,m:{}};
+      smap[id].m[k]=s.pct;
+    });
+  });
+  const students=Object.values(smap).sort((a,b)=>(parseInt(a.rollNo)||0)-(parseInt(b.rollNo)||0)||a.name.localeCompare(b.name));
+  const mCols=keys.map(k=>{const dd=state.sheets[k];return `${mShort(dd.month)} ${dd.year}`;});
+  const hdr=['Roll No','Enrollment No','Student Name',...mCols,'Avg %','Marks (/5)'];
+  const rows=[hdr,...students.map(s=>{
+    const pcts=keys.map(k=>s.m[k]??null);
+    const valid=pcts.filter(p=>p!==null);
+    const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+    return [s.rollNo,s.enrollmentNo,s.name,...pcts.map(p=>p!==null?p+'%':'—'),avg+'%',marks(avg)];
+  })];
+  if(fmt==='xlsx'){
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),subj.substring(0,31));
+    XLSX.writeFile(wb,`${subj}_Master_Sheet.xlsx`);
+  } else {
+    const csv=rows.map(r=>r.map(c=>typeof c==='string'&&c.includes(',')? `"${c}"`:c).join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download=`${subj}_Master_Sheet.csv`;a.click();
+  }
+}
+
+// ===== EXPORT: All Subjects in one Excel (multi-sheet) =====
+function dlAllSubjectsXLSX(){
+  const subjects=getSubjects();if(!subjects.length)return;
+  const wb=XLSX.utils.book_new();
+  subjects.forEach(subj=>{
+    const keys=getKeysForSubject(subj);
+    const smap={};
+    keys.forEach(k=>{
+      state.sheets[k].students.forEach(s=>{
+        const id=s.enrollmentNo||(s.rollNo+'_'+s.name);
+        if(!smap[id]) smap[id]={name:s.name,rollNo:s.rollNo,enrollmentNo:s.enrollmentNo,m:{}};
+        smap[id].m[k]=s.pct;
+      });
+    });
+    const students=Object.values(smap).sort((a,b)=>(parseInt(a.rollNo)||0)-(parseInt(b.rollNo)||0)||a.name.localeCompare(b.name));
+    const mCols=keys.map(k=>{const dd=state.sheets[k];return `${mShort(dd.month)} ${dd.year}`;});
+    const hdr=['Roll No','Enrollment No','Student Name',...mCols,'Avg %','Marks (/5)'];
+    const rows=[hdr,...students.map(s=>{
+      const pcts=keys.map(k=>s.m[k]??null);
+      const valid=pcts.filter(p=>p!==null);
+      const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+      return [s.rollNo,s.enrollmentNo,s.name,...pcts.map(p=>p!==null?p+'%':'—'),avg+'%',marks(avg)];
+    })];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),subj.substring(0,31));
+  });
+  XLSX.writeFile(wb,'All_Subjects_Master_Sheet.xlsx');
+}
+
+// ===== RENDER: Upload =====
+function renderUpload(){
+  const mOpts=MONTHS.map((m,i)=>`<option value="${i+1}" ${state.month===i+1?'selected':''}>${m}</option>`).join('');
+  const yOpts=[2023,2024,2025,2026,2027].map(y=>`<option value="${y}" ${state.year===y?'selected':''}>${y}</option>`).join('');
+  const cards=[1,2,3,4].map(i=>{
+    const idx=i-1, has=state.files[idx]!==null;
+    return `<div class="faculty-card ${has?'has-file':''}">
+      <input type="file" accept=".pdf,image/*" onchange="handleFile(${idx},this)">
+      <div class="f-icon">${has?'✅':'📄'}</div>
+      <div class="f-title">Faculty ${i}</div>
+      <div class="f-hint">${has?'Click to replace':'Click to upload PDF'}</div>
+      ${has?`<div class="f-name">📎 ${state.fileNames[idx]}</div>`:''}
+    </div>`;
+  }).join('');
+  return `<div class="card">
+    <div class="section-title" style="margin-bottom:16px">📁 Upload Attendance Sheets</div>
+    <div class="form-row">
+      <div class="form-group"><label>Subject Name</label>
+        <input type="text" placeholder="e.g. Mathematics, Physics…" value="${state.subject}"
+          oninput="state.subject=this.value" style="min-width:200px"></div>
+      <div class="form-group"><label>Month</label>
+        <select onchange="state.month=parseInt(this.value);render()">${mOpts}</select></div>
+      <div class="form-group"><label>Year</label>
+        <select onchange="state.year=parseInt(this.value);render()">${yOpts}</select></div>
+      <div style="padding-top:22px;font-size:.83rem;color:#64748b">
+        📅 ${getDays(state.month,state.year)} days in ${mName(state.month)} ${state.year}
+      </div>
+    </div>
+    <div style="font-size:.8rem;font-weight:600;color:#475569;margin-bottom:8px">Faculty Attendance Sheets (up to 4 PDFs)</div>
+    <div class="faculty-grid">${cards}</div>
+    ${state.error?`<div class="alert alert-e">⚠️ ${state.error}</div>`:''}
+    ${state.success?`<div class="alert alert-s">${state.success}</div>`:''}
+    ${state.processing?`<div class="status-bar"><div class="spinner"></div><span>${state.procStatus}</span></div>`:''}
+    <button class="btn btn-primary" onclick="processFiles()" ${state.processing?'disabled':''}>
+      ${state.processing?'⏳ Processing…':'🚀 Process &amp; Compile Attendance'}
+    </button>
+  </div>
+  <div class="tip-box">
+    <b>💡 How it works:</b><br>
+    1. Enter <b>Subject Name</b>, select month &amp; year → upload 1–4 faculty PDFs<br>
+    2. AI reads each sheet: ○ ✓ = Present, blank ✗ = Absent · Majority rule per student<br>
+    3. Repeat for each month &amp; subject → Monthly Sheet, Master Sheet, Subject Master all update automatically
+  </div>`;
+}
+
+// ===== RENDER: Monthly =====
+function renderMonthly(){
+  const keys=Object.keys(state.sheets).sort();
+  if(!keys.length) return `<div class="empty-state"><div class="ei">📊</div>
+    <div style="font-size:1rem;font-weight:600;margin-bottom:8px">No Monthly Data Yet</div>
+    <div style="font-size:.85rem">Upload &amp; process attendance sheets from the Upload tab.</div></div>`;
+
+  if(!state.curMonth||!state.sheets[state.curMonth]) state.curMonth=keys[keys.length-1];
+  const d=state.sheets[state.curMonth];
+  const {month,year,days,students,subject}=d;
+  const n=students.length;
+  const avgP=n?Math.round(students.reduce((s,st)=>s+st.pct,0)/n):0;
+  const a70=students.filter(s=>s.pct>=70).length;
+  const b50=students.filter(s=>s.pct<50).length;
+
+  const pills=keys.map(k=>{const dd=state.sheets[k];
+    return `<button class="m-pill ${k===state.curMonth?'active':''}" onclick="state.curMonth='${k}';render()">
+      ${dd.subject?`<span style="font-size:.7rem;opacity:.8">${dd.subject} · </span>`:''}${mShort(dd.month)} ${dd.year}</button>`;}).join('');
+
+  const dayHdr=Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');
+  const sRows=students.map(s=>{
+    const dc=Array.from({length:days},(_,i)=>{
+      const m=s.att[i+1]||'A';
+      return `<td><span class="${m==='P'?'p-cell':'a-cell'}">${m}</span></td>`;
+    }).join('');
+    return `<tr>
+      <td>${s.rollNo||'—'}</td><td>${s.enrollmentNo||'—'}</td>
+      <td style="min-width:130px;max-width:180px">${s.name}</td>
+      ${dc}
+      <td style="font-weight:700;color:#16a34a">${s.tp}</td>
+      <td style="font-weight:700;color:#dc2626">${s.ta}</td>
+      <td><span class="${pClass(s.pct)}">${s.pct}%</span></td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="card">
+    <div class="section-header">
+      <div><span class="section-title">📊 ${mName(month)} ${year}</span><span class="subj-tag">${subject||'General'}</span></div>
+      <div class="action-bar">
+        <button class="btn btn-success btn-sm" onclick="dlMonthlyXLSX('${state.curMonth}')">⬇️ Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="dlMonthlyCSV('${state.curMonth}')">⬇️ CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="if(confirm('Delete this sheet?')){delete state.sheets['${state.curMonth}'];state.curMonth=null;render()}">🗑️</button>
+      </div>
+    </div>
+    <div class="month-pills">${pills}</div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="sv">${n}</div><div class="sl">Students</div></div>
+      <div class="stat-card"><div class="sv">${days}</div><div class="sl">Working Days</div></div>
+      <div class="stat-card"><div class="sv">${avgP}%</div><div class="sl">Class Average</div></div>
+      <div class="stat-card"><div class="sv" style="color:#16a34a">${a70}</div><div class="sl">≥70%</div></div>
+      <div class="stat-card"><div class="sv" style="color:#dc2626">${b50}</div><div class="sl">Below 50%</div></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Roll No</th><th>Enroll. No</th><th>Student Name</th>
+        ${dayHdr}<th>Present</th><th>Absent</th><th>%</th>
+      </tr></thead>
+      <tbody>${sRows}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ===== RENDER: Master (Overall) =====
+function renderMaster(){
+  const keys=Object.keys(state.sheets).sort();
+  if(!keys.length) return `<div class="empty-state"><div class="ei">📈</div>
+    <div style="font-size:1rem;font-weight:600;margin-bottom:8px">No Master Sheet Data</div>
+    <div style="font-size:.85rem">Process attendance for 2+ months to generate the master sheet.</div></div>`;
+
+  const smap={};
+  keys.forEach(k=>{
+    state.sheets[k].students.forEach(s=>{
+      const id=s.enrollmentNo||(s.rollNo+'_'+s.name);
+      if(!smap[id]) smap[id]={name:s.name,rollNo:s.rollNo,enrollmentNo:s.enrollmentNo,m:{}};
+      smap[id].m[k]=s.pct;
+    });
+  });
+  const students=Object.values(smap).sort((a,b)=>(parseInt(a.rollNo)||0)-(parseInt(b.rollNo)||0)||a.name.localeCompare(b.name));
+
+  const mHdr=keys.map(k=>{const dd=state.sheets[k];
+    return `<th>${dd.subject||'Gen'}<br><span style="font-weight:400;font-size:.7rem">${mShort(dd.month)} ${dd.year}</span></th>`;}).join('');
+
+  const sRows=students.map(s=>{
+    const pcts=keys.map(k=>s.m[k]??null);
+    const valid=pcts.filter(p=>p!==null);
+    const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+    const mk=marks(avg);
+    const mCells=pcts.map(p=>p===null?`<td style="color:#cbd5e1">—</td>`:`<td><span class="${pClass(p)}">${p}%</span></td>`).join('');
+    return `<tr>
+      <td>${s.rollNo||'—'}</td><td>${s.enrollmentNo||'—'}</td>
+      <td style="min-width:130px">${s.name}</td>
+      ${mCells}
+      <td><span class="${pClass(avg)}">${avg}%</span></td>
+      <td><span class="marks-badge m${mk}">${mk}</span></td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="card">
+    <div class="section-header">
+      <div class="section-title">📈 Overall Master Sheet <span style="font-size:.8rem;color:#64748b;font-weight:400">(all subjects &amp; months)</span></div>
+      <div class="action-bar">
+        <button class="btn btn-success btn-sm" onclick="dlMaster('xlsx')">⬇️ Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="dlMaster('csv')">⬇️ CSV</button>
+      </div>
+    </div>
+    <div style="background:#f8fafc;border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:.8rem;color:#475569;display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+      <b>Marks /5:</b>
+      <span><span class="marks-badge m5" style="display:inline-flex">5</span> ≥ 70%</span>
+      <span><span class="marks-badge m4" style="display:inline-flex">4</span> ≥ 60%</span>
+      <span><span class="marks-badge m3" style="display:inline-flex">3</span> ≥ 50%</span>
+      <span><span class="marks-badge m2" style="display:inline-flex">2</span> &lt; 50%</span>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Roll No</th><th>Enroll. No</th><th>Student Name</th>
+        ${mHdr}<th>Avg %</th><th>Marks /5</th>
+      </tr></thead>
+      <tbody>${sRows}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ===== RENDER: Subject Master =====
+function renderSubjectMaster(){
+  const subjects=getSubjects();
+  if(!subjects.length) return `<div class="empty-state"><div class="ei">📚</div>
+    <div style="font-size:1rem;font-weight:600;margin-bottom:8px">No Subject Data Yet</div>
+    <div style="font-size:.85rem">Enter a Subject Name when uploading sheets. Each subject gets its own master sheet here.</div></div>`;
+
+  if(!state.curSubject||!subjects.includes(state.curSubject)) state.curSubject=subjects[0];
+  const subj=state.curSubject;
+  const keys=getKeysForSubject(subj);
+
+  // Build student map for this subject
+  const smap={};
+  keys.forEach(k=>{
+    state.sheets[k].students.forEach(s=>{
+      const id=s.enrollmentNo||(s.rollNo+'_'+s.name);
+      if(!smap[id]) smap[id]={name:s.name,rollNo:s.rollNo,enrollmentNo:s.enrollmentNo,m:{}};
+      smap[id].m[k]=s.pct;
+    });
+  });
+  const students=Object.values(smap).sort((a,b)=>(parseInt(a.rollNo)||0)-(parseInt(b.rollNo)||0)||a.name.localeCompare(b.name));
+  const n=students.length;
+
+  // Per-month avg for stats
+  const allPcts=students.flatMap(s=>Object.values(s.m));
+  const overallAvg=allPcts.length?Math.round(allPcts.reduce((a,b)=>a+b,0)/allPcts.length):0;
+
+  const subjPills=subjects.map(s=>`<button class="subj-pill ${s===subj?'active':''}" onclick="state.curSubject='${s.replace(/'/g,"\\'")}';render()">${s}</button>`).join('');
+
+  const mHdr=keys.map(k=>{const dd=state.sheets[k];
+    return `<th>${mShort(dd.month)}<br><span style="font-weight:400;font-size:.7rem">${dd.year}</span></th>`;}).join('');
+
+  const sRows=students.map(s=>{
+    const pcts=keys.map(k=>s.m[k]??null);
+    const valid=pcts.filter(p=>p!==null);
+    const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+    const mk=marks(avg);
+    const mCells=pcts.map(p=>p===null?`<td style="color:#cbd5e1">—</td>`:`<td><span class="${pClass(p)}">${p}%</span></td>`).join('');
+    return `<tr>
+      <td>${s.rollNo||'—'}</td><td>${s.enrollmentNo||'—'}</td>
+      <td style="min-width:130px">${s.name}</td>
+      ${mCells}
+      <td><span class="${pClass(avg)}">${avg}%</span></td>
+      <td><span class="marks-badge m${mk}">${mk}</span></td>
+    </tr>`;
+  }).join('');
+
+  const safeSubj=subj.replace(/'/g,"\\'");
+
+  return `<div class="card">
+    <div class="section-header">
+      <div class="section-title">📚 Subject-wise Master Sheet</div>
+      <div class="action-bar">
+        <button class="btn btn-purple btn-sm" onclick="dlAllSubjectsXLSX()">⬇️ All Subjects Excel</button>
+      </div>
+    </div>
+    <div class="month-pills" style="margin-bottom:16px">${subjPills}</div>
+
+    <div class="subj-header-box">
+      <div>
+        <div class="sname">📖 ${subj}</div>
+        <div class="smeta">${keys.length} month(s) · ${n} students · Overall avg: <b>${overallAvg}%</b></div>
+      </div>
+      <div class="action-bar">
+        <button class="btn btn-success btn-sm" onclick="dlSubjectMaster('${safeSubj}','xlsx')">⬇️ Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="dlSubjectMaster('${safeSubj}','csv')">⬇️ CSV</button>
+      </div>
+    </div>
+
+    <div style="background:#f8fafc;border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:.8rem;color:#475569;display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+      <b>Marks /5:</b>
+      <span><span class="marks-badge m5" style="display:inline-flex">5</span> ≥ 70%</span>
+      <span><span class="marks-badge m4" style="display:inline-flex">4</span> ≥ 60%</span>
+      <span><span class="marks-badge m3" style="display:inline-flex">3</span> ≥ 50%</span>
+      <span><span class="marks-badge m2" style="display:inline-flex">2</span> &lt; 50%</span>
+    </div>
+
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Roll No</th><th>Enroll. No</th><th>Student Name</th>
+        ${mHdr}<th>Avg %</th><th>Marks /5</th>
+      </tr></thead>
+      <tbody>${sRows}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ===== MAIN RENDER =====
+function render(){
+  const tabDefs=[
+    {id:'upload',label:'📁 Upload'},
+    {id:'monthly',label:'📊 Monthly Sheet'},
+    {id:'master',label:'📈 Master Sheet'},
+    {id:'subjectmaster',label:'📚 Subject Master'}
+  ];
+  const tabBtns=tabDefs.map(t=>`<button class="tab-btn ${state.tab===t.id?'active':''}" onclick="state.tab='${t.id}';render()">${t.label}</button>`).join('');
+  let body='';
+  if(state.tab==='upload') body=renderUpload();
+  else if(state.tab==='monthly') body=renderMonthly();
+  else if(state.tab==='master') body=renderMaster();
+  else body=renderSubjectMaster();
+
+  document.getElementById('root').innerHTML=`
+    <header>
+      <h1>🎓 Attendance Manager</h1>
+      <p>AI-powered handwritten sheet reader · Multi-faculty compilation · Monthly · Master · Subject-wise reports</p>
+    </header>
+    <nav class="tabs">${tabBtns}</nav>
+    <main>${body}</main>`;
+}
+
+function handleFile(idx, input){
+  const f=input.files[0];if(!f)return;
+  state.files[idx]=f;state.fileNames[idx]=f.name;
+  state.error=null;render();
+}
+
+render();
+</script>
+</body>
+</html>
